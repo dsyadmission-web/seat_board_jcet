@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Live Seat Board — CAP &amp; Institute Level Quota</title>
+<style>
+  :root{
+    --bg:#f4f5fb;
+    --panel:#ffffff;
+    --panel-alt:#eef0fa;
+    --purple:#7d72a8;
+    --purple-dark:#5f5586;
+    --purple-tint:#ece9f7;
+    --ink:#1c2340;
+    --text-dim:#6b7280;
+    --line:#e1e3ef;
+    --gold:#c98a12;
+    --gold-tint:#fbeed2;
+    --admit:#1f9d73;
+    --admit-dark:#137a58;
+    --admit-tint:#e4f7ef;
+    --vacant:#dd8a19;
+    --vacant-dark:#b06e0f;
+    --vacant-tint:#fdf0dd;
+    --cancel:#d9463a;
+    --cancel-tint:#fdeceb;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(ellipse 900px 420px at 50% -12%, rgba(125,114,168,0.10), transparent 60%),
+      var(--bg);
+    color:var(--ink);
+    font-family:"Segoe UI","Helvetica Neue",Arial,sans-serif;
+    min-height:100vh;
+    padding-bottom:112px;
+  }
+  .digits{font-family:"Bahnschrift","Arial Narrow","Segoe UI",sans-serif;font-weight:800;letter-spacing:.5px;}
+
+  /* ---------- Marquee header ---------- */
+  header.marquee{
+    background:linear-gradient(180deg,#ffffff 0%, var(--purple-tint) 100%);
+    border-bottom:2px solid var(--purple);
+    padding:20px 28px 14px;
+    display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:14px;
+  }
+  .brand-block .inst{font-size:clamp(19px,3vw,28px);font-weight:800;letter-spacing:.3px;color:var(--purple-dark);}
+  .brand-block .sub{margin-top:4px;color:var(--gold);font-size:12.5px;font-weight:700;letter-spacing:2px;text-transform:uppercase;}
+  .status-block{text-align:right;font-size:13px;color:var(--text-dim);}
+  .status-block .clock{font-size:21px;color:var(--ink);font-weight:800;}
+  .live-pill{display:inline-flex;align-items:center;gap:6px;background:var(--cancel-tint);border:1px solid var(--cancel);color:var(--cancel);padding:3px 10px 3px 8px;border-radius:20px;font-size:11px;font-weight:800;letter-spacing:1px;margin-left:8px;}
+  .live-pill.off{border-color:var(--line);color:var(--text-dim);background:transparent;}
+  .live-dot{width:7px;height:7px;border-radius:50%;background:var(--cancel);box-shadow:0 0 6px var(--cancel);animation:pulse 1.2s infinite;}
+  .live-pill.off .live-dot{background:#a7adbd;box-shadow:none;animation:none;}
+  @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.25;}}
+
+  /* ---------- Tabs ---------- */
+  .tabbar{
+    max-width:980px;margin:20px auto 0;padding:0 28px;
+    display:flex;gap:10px;
+  }
+  .tabbtn{
+    flex:1;padding:12px 16px;border-radius:12px 12px 0 0;
+    border:1px solid var(--line);border-bottom:none;
+    background:var(--panel-alt);color:var(--text-dim);
+    font-weight:800;font-size:13.5px;letter-spacing:.5px;cursor:pointer;
+    text-align:center;
+  }
+  .tabbtn.active{background:var(--panel);color:var(--purple-dark);border-color:var(--purple);box-shadow:0 -4px 14px rgba(125,114,168,0.12);}
+
+  /* ---------- Overall scoreboard ---------- */
+  .overall-wrap{padding:0 28px 6px;}
+  .overall{
+    max-width:980px;margin:0 auto;background:var(--panel);
+    border:1px solid var(--purple);border-top:4px solid var(--gold);
+    border-radius:0 0 16px 16px;padding:20px 24px;
+    box-shadow:0 14px 30px rgba(80,70,130,0.10);
+  }
+  .overall-title{text-align:center;font-size:12px;letter-spacing:3px;color:var(--text-dim);font-weight:700;margin-bottom:14px;}
+  .score-row{display:flex;align-items:center;gap:18px;}
+  .score-side{flex:1;text-align:center;}
+  .score-num{font-size:clamp(36px,6vw,54px);line-height:1;}
+  .score-num.admit{color:var(--admit);}
+  .score-num.vacant{color:var(--vacant);}
+  .score-lbl{font-size:12px;letter-spacing:2px;color:var(--text-dim);margin-top:4px;font-weight:700;}
+  .score-mid{flex:0 0 auto;text-align:center;padding:0 10px;}
+  .score-mid .intake-num{font-size:clamp(20px,3vw,28px);color:var(--gold);}
+  .score-mid .intake-lbl{font-size:11px;color:var(--text-dim);letter-spacing:1.5px;font-weight:700;margin-top:2px;}
+  .overall-bar{margin-top:16px;height:14px;border-radius:8px;overflow:hidden;display:flex;background:var(--panel-alt);}
+  .overall-bar .seg-admit{background:linear-gradient(90deg,var(--admit-dark),var(--admit));transition:width .6s ease;}
+  .overall-bar .seg-vacant{background:linear-gradient(90deg,var(--vacant),var(--vacant-dark));transition:width .6s ease;}
+  .overall-foot{display:flex;justify-content:center;gap:26px;margin-top:10px;font-size:12px;color:var(--text-dim);}
+  .overall-foot b{color:var(--cancel);}
+
+  /* ---------- Branch grid ---------- */
+  .grid{max-width:1180px;margin:22px auto 0;padding:0 28px;display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:18px;}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;overflow:hidden;box-shadow:0 8px 20px rgba(70,60,120,0.08);}
+  .card.flash{animation:flashcard 1s ease;}
+  @keyframes flashcard{0%{box-shadow:0 0 0 2px var(--gold),0 8px 20px rgba(70,60,120,0.08);}100%{box-shadow:0 8px 20px rgba(70,60,120,0.08);}}
+  .card-head{display:flex;align-items:center;gap:10px;padding:12px 16px;background:var(--purple-tint);border-bottom:1px solid var(--line);}
+  .sr-badge{flex:0 0 auto;width:26px;height:26px;border-radius:50%;background:var(--purple);color:#fff;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;}
+  .card-head .name-wrap{flex:1;min-width:0;}
+  .card-head .name{font-weight:800;font-size:14px;letter-spacing:.2px;color:var(--purple-dark);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .card-head .choice{font-size:10.5px;color:var(--text-dim);margin-top:1px;}
+  .intake-badge{font-size:11px;font-weight:800;color:#fff;background:var(--gold);padding:3px 9px;border-radius:20px;letter-spacing:.5px;white-space:nowrap;}
+  .split-bar{display:flex;height:58px;}
+  .split-seg{display:flex;flex-direction:column;align-items:center;justify-content:center;transition:flex-basis .6s ease,background .3s ease;min-width:46px;color:#fff;}
+  .split-seg .n{font-size:23px;line-height:1;}
+  .split-seg .t{font-size:10px;letter-spacing:1.5px;font-weight:700;margin-top:3px;opacity:.95;}
+  .split-seg.admit,.split-seg.full{background:linear-gradient(180deg,var(--admit),var(--admit-dark));}
+  .split-seg.vacant{background:linear-gradient(180deg,var(--vacant),var(--vacant-dark));}
+  .split-seg.empty{background:linear-gradient(180deg,#c7cbdb,#aeb3c9);}
+  .card-foot{display:flex;justify-content:space-between;padding:9px 16px;font-size:11.5px;color:var(--text-dim);border-top:1px solid var(--line);}
+  .card-foot .cancel-tag{color:var(--cancel);font-weight:700;}
+  .card-foot .cancel-tag.zero{color:var(--text-dim);font-weight:400;}
+
+  .empty-state{max-width:640px;margin:50px auto;text-align:center;color:var(--text-dim);padding:0 20px;}
+  .empty-state h2{color:var(--ink);font-size:20px;}
+  .empty-state p{font-size:14px;line-height:1.6;}
+
+  /* ---------- Control dock ---------- */
+  .dock{position:fixed;bottom:0;left:0;right:0;background:rgba(255,255,255,0.96);backdrop-filter:blur(6px);border-top:1px solid var(--line);padding:12px 20px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;z-index:20;box-shadow:0 -6px 18px rgba(70,60,120,0.06);}
+  .dock .dock-target{font-size:11.5px;font-weight:800;color:var(--purple-dark);background:var(--purple-tint);padding:8px 12px;border-radius:9px;letter-spacing:.3px;}
+  .dock button, .dock label.file-btn{background:var(--panel-alt);border:1px solid var(--line);color:var(--ink);padding:9px 16px;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:7px;}
+  .dock button:hover, .dock label.file-btn:hover{background:#e2e5f4;}
+  .dock button.primary{background:var(--admit);border-color:var(--admit-dark);color:#fff;}
+  .dock button.primary:hover{background:var(--admit-dark);}
+  .dock input[type=file]{display:none;}
+  .dock .interval{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-dim);}
+  .dock select{background:#fff;color:var(--ink);border:1px solid var(--line);border-radius:7px;padding:6px 8px;font-size:12px;}
+  .dock .fname{font-size:12px;color:var(--text-dim);margin-left:auto;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .dock .msg{font-size:12px;color:var(--cancel);}
+  .dock-row2{flex-basis:100%;display:flex;gap:10px;align-items:center;}
+  .dock-row2 input[type=url]{flex:1;min-width:180px;border:1px solid var(--line);border-radius:9px;padding:9px 12px;font-size:12.5px;color:var(--ink);background:#fff;}
+  .dock-row2 input[type=url]:focus{outline:2px solid var(--purple);}
+</style>
+</head>
+<body>
+
+<header class="marquee">
+  <div class="brand-block">
+    <div class="inst">Jagadambha College of Engineering &amp; Technology, Yavatmal</div>
+    <div class="sub" id="subLine">CAP Quota — Live Seat Status</div>
+  </div>
+  <div class="status-block">
+    <div class="clock digits" id="clock">--:--:--</div>
+    <div>
+      Last updated: <span id="lastUpdated">not loaded</span>
+      <span class="live-pill off" id="livePill"><span class="live-dot"></span><span id="livePillText">MANUAL</span></span>
+    </div>
+  </div>
+</header>
+
+<div class="tabbar">
+  <div class="tabbtn active" id="tabCap" data-tab="cap">CAP Quota</div>
+  <div class="tabbtn" id="tabInst" data-tab="inst">Institute Level Quota</div>
+</div>
+
+<div class="overall-wrap">
+  <div class="overall">
+    <div class="overall-title" id="overallTitle">CAP QUOTA — ALL BRANCHES</div>
+    <div class="score-row">
+      <div class="score-side">
+        <div class="score-num digits admit" id="totalAdmitted">0</div>
+        <div class="score-lbl">ADMITTED</div>
+      </div>
+      <div class="score-mid">
+        <div class="intake-num digits" id="totalIntake">0</div>
+        <div class="intake-lbl">TOTAL INTAKE</div>
+      </div>
+      <div class="score-side">
+        <div class="score-num digits vacant" id="totalVacant">0</div>
+        <div class="score-lbl">VACANT</div>
+      </div>
+    </div>
+    <div class="overall-bar">
+      <div class="seg-admit" id="overallBarAdmit" style="width:0%"></div>
+      <div class="seg-vacant" id="overallBarVacant" style="width:100%"></div>
+    </div>
+    <div class="overall-foot"><span>Cancelled so far: <b id="totalCancelled">0</b></span></div>
+  </div>
+</div>
+
+<div id="gridArea">
+  <div class="empty-state" id="emptyState">
+    <h2>No data loaded yet</h2>
+    <p>Load a seat-status CSV for this tab from the dock below, or click <b>Load Sample Data</b> to preview the board.</p>
+  </div>
+  <div class="grid" id="grid" style="display:none;"></div>
+</div>
+
+<div class="dock">
+  <span class="dock-target" id="dockTarget">Loading into: CAP QUOTA</span>
+  <label class="file-btn">
+    📂 Open CSV (basic)
+    <input type="file" id="fileInputBasic" accept=".csv">
+  </label>
+  <button id="btnPickLive" class="primary">🔴 Connect Live File (auto-refresh)</button>
+  <div class="interval">
+    Refresh every
+    <select id="intervalSelect">
+      <option value="5">5s</option>
+      <option value="10" selected>10s</option>
+      <option value="30">30s</option>
+      <option value="60">60s</option>
+    </select>
+  </div>
+  <button id="btnSample">Load Sample Data</button>
+  <span class="fname" id="fname"></span>
+  <span class="msg" id="msg"></span>
+
+  <div class="dock-row2">
+    <input type="url" id="sheetUrlInput" placeholder="Paste published Google Sheet CSV link for this tab…">
+    <button id="btnConnectSheet" class="primary">🌐 Connect Google Sheet (live)</button>
+  </div>
+</div>
+
+<script>
+/* ===================== Clock ===================== */
+function tickClock(){ document.getElementById('clock').textContent = new Date().toLocaleTimeString('en-IN',{hour12:false}); }
+setInterval(tickClock,1000); tickClock();
+
+/* ===================== Live web-data config ===================== */
+// Paste each tab's PUBLISHED Google Sheet CSV link below (File > Share > Publish to web > CSV).
+// Once filled in, every visitor who opens this page gets live, auto-refreshing data —
+// no manual "Connect" click needed. Leave blank to rely on the manual dock controls instead.
+const CONFIG = {
+  cap:  { sheetUrl: '' },
+  inst: { sheetUrl: '' }
+};
+const DEFAULT_REFRESH_SECS = 10;
+
+/* ===================== Per-tab state ===================== */
+const tabs = {
+  cap:  { label:'CAP Quota',                rows:[], previousData:{}, liveHandle:null, liveTimer:null, refreshFn:null, sheetUrl:'', fname:'' },
+  inst: { label:'Institute Level Quota',     rows:[], previousData:{}, liveHandle:null, liveTimer:null, refreshFn:null, sheetUrl:'', fname:'' }
+};
+let activeTab = 'cap';
+
+/* ===================== CSV parsing ===================== */
+// Expected header (case-insensitive, order-independent):
+// Sr No,Choice Code,Branch/Course Name,Intake,Admitted,Cancelled[,Vacancy]
+function parseCSV(text){
+  const lines = text.split(/\r?\n/).map(l=>l.trim()).filter(l=>l.length>0);
+  if(lines.length < 2) return [];
+  const header = lines[0].split(',').map(h=>h.trim().toLowerCase());
+  const idx = {
+    sr: header.findIndex(h=>h.includes('sr')),
+    choice: header.findIndex(h=>h.includes('choice')),
+    branch: header.findIndex(h=>h.includes('branch')||h.includes('course')||h.includes('program')),
+    intake: header.findIndex(h=>h.includes('intake')),
+    admitted: header.findIndex(h=>h.includes('admit')),
+    cancelled: header.findIndex(h=>h.includes('cancel')),
+    vacancy: header.findIndex(h=>h.includes('vacan'))
+  };
+  const rows = [];
+  for(let i=1;i<lines.length;i++){
+    const cols = lines[i].split(',').map(c=>c.trim());
+    if(idx.branch===-1 || !cols[idx.branch]) continue;
+    if(/^total$/i.test(cols[idx.branch])) continue;
+    const intake = parseInt(cols[idx.intake]) || 0;
+    const admitted = idx.admitted>-1 ? (parseInt(cols[idx.admitted])||0) : 0;
+    const cancelled = idx.cancelled>-1 ? (parseInt(cols[idx.cancelled])||0) : 0;
+    let vacancy;
+    if(idx.vacancy>-1 && cols[idx.vacancy]!==undefined && cols[idx.vacancy]!==''){
+      vacancy = parseInt(cols[idx.vacancy])||0;
+    } else {
+      vacancy = Math.max(intake - admitted, 0);
+    }
+    rows.push({
+      sr: idx.sr>-1 ? cols[idx.sr] : String(i),
+      choice: idx.choice>-1 ? cols[idx.choice] : '',
+      branch:cols[idx.branch], intake, admitted, cancelled, vacancy
+    });
+  }
+  return rows;
+}
+
+/* ===================== Rendering ===================== */
+function render(){
+  const t = tabs[activeTab];
+  const rows = t.rows;
+  const grid = document.getElementById('grid');
+  const empty = document.getElementById('emptyState');
+  if(!rows || rows.length===0){
+    grid.style.display='none'; empty.style.display='block';
+    document.getElementById('totalIntake').textContent = 0;
+    document.getElementById('totalAdmitted').textContent = 0;
+    document.getElementById('totalVacant').textContent = 0;
+    document.getElementById('totalCancelled').textContent = 0;
+    document.getElementById('overallBarAdmit').style.width='0%';
+    document.getElementById('overallBarVacant').style.width='100%';
+    return;
+  }
+  empty.style.display='none'; grid.style.display='grid';
+
+  let totIntake=0, totAdmit=0, totCancel=0, totVacant=0;
+  grid.innerHTML='';
+  rows.forEach(r=>{
+    totIntake+=r.intake; totAdmit+=r.admitted; totCancel+=r.cancelled; totVacant+=r.vacancy;
+    const denom = (r.admitted + r.vacancy) || 1;
+    const admitPct = Math.round((r.admitted/denom)*100);
+    const vacantPct = 100-admitPct;
+    const prev = t.previousData[r.branch];
+    const changed = prev && (prev.admitted!==r.admitted || prev.cancelled!==r.cancelled || prev.vacancy!==r.vacancy);
+    const isFull = r.vacancy<=0;
+
+    const card = document.createElement('div');
+    card.className = 'card' + (changed ? ' flash' : '');
+    card.innerHTML = `
+      <div class="card-head">
+        <div class="sr-badge">${r.sr}</div>
+        <div class="name-wrap">
+          <div class="name">${r.branch}</div>
+          ${r.choice ? `<div class="choice">Choice Code: ${r.choice}</div>` : ''}
+        </div>
+        <div class="intake-badge">INTAKE ${r.intake}</div>
+      </div>
+      <div class="split-bar">
+        <div class="split-seg ${r.admitted>0?'admit':'empty'}" style="flex-basis:${admitPct}%;">
+          <div class="n digits">${r.admitted}</div>
+          <div class="t">ADMITTED</div>
+        </div>
+        <div class="split-seg ${isFull?'full':(r.vacancy>0?'vacant':'empty')}" style="flex-basis:${vacantPct}%;">
+          <div class="n digits">${r.vacancy}</div>
+          <div class="t">${isFull?'FULL':'VACANT'}</div>
+        </div>
+      </div>
+      <div class="card-foot">
+        <span>${t.label}</span>
+        <span class="cancel-tag ${r.cancelled===0?'zero':''}">Cancelled: ${r.cancelled}</span>
+      </div>
+    `;
+    grid.appendChild(card);
+  });
+
+  t.previousData = {};
+  rows.forEach(r=> t.previousData[r.branch]=r);
+
+  document.getElementById('totalIntake').textContent = totIntake;
+  document.getElementById('totalAdmitted').textContent = totAdmit;
+  document.getElementById('totalVacant').textContent = totVacant;
+  document.getElementById('totalCancelled').textContent = totCancel;
+  const admitShare = totIntake>0 ? (totAdmit/totIntake*100) : 0;
+  document.getElementById('overallBarAdmit').style.width = admitShare+'%';
+  document.getElementById('overallBarVacant').style.width = (100-admitShare)+'%';
+  document.getElementById('lastUpdated').textContent = new Date().toLocaleTimeString('en-IN',{hour12:false});
+}
+
+/* ===================== Tab switching ===================== */
+function switchTab(name){
+  activeTab = name;
+  document.getElementById('tabCap').classList.toggle('active', name==='cap');
+  document.getElementById('tabInst').classList.toggle('active', name==='inst');
+  document.getElementById('subLine').textContent = tabs[name].label + ' — Live Seat Status';
+  document.getElementById('overallTitle').textContent = tabs[name].label.toUpperCase() + ' — ALL BRANCHES';
+  document.getElementById('dockTarget').textContent = 'Loading into: ' + tabs[name].label.toUpperCase();
+  document.getElementById('fname').textContent = tabs[name].fname;
+  document.getElementById('sheetUrlInput').value = tabs[name].sheetUrl || '';
+  setLiveStatus(!!tabs[name].liveTimer);
+  render();
+}
+document.getElementById('tabCap').addEventListener('click', ()=>switchTab('cap'));
+document.getElementById('tabInst').addEventListener('click', ()=>switchTab('inst'));
+
+/* ===================== File loading: basic (manual) ===================== */
+document.getElementById('fileInputBasic').addEventListener('change', function(e){
+  const file = e.target.files[0];
+  if(!file) return;
+  const t = tabs[activeTab];
+  stopLiveWatch(t);
+  setLiveStatus(false);
+  t.fname = file.name;
+  document.getElementById('fname').textContent = file.name;
+  const reader = new FileReader();
+  reader.onload = ev => { t.rows = parseCSV(ev.target.result); render(); };
+  reader.onerror = () => setMsg('Could not read file.');
+  reader.readAsText(file);
+});
+
+/* ===================== File loading: live (File System Access API) ===================== */
+function setLiveStatus(on){
+  const pill = document.getElementById('livePill');
+  const txt = document.getElementById('livePillText');
+  if(on){ pill.classList.remove('off'); txt.textContent='LIVE'; }
+  else { pill.classList.add('off'); txt.textContent='MANUAL'; }
+}
+function stopLiveWatch(t){ if(t.liveTimer){ clearInterval(t.liveTimer); t.liveTimer=null; } }
+
+async function readLiveHandle(t){
+  try{
+    const file = await t.liveHandle.getFile();
+    const text = await file.text();
+    t.rows = parseCSV(text);
+    if(activeTab === (t===tabs.cap?'cap':'inst')) render();
+    setMsg('');
+  }catch(err){
+    setMsg('Lost access to the live file — reconnect it.');
+    stopLiveWatch(t);
+    if(activeTab === (t===tabs.cap?'cap':'inst')) setLiveStatus(false);
+  }
+}
+
+document.getElementById('btnPickLive').addEventListener('click', async ()=>{
+  if(!window.showOpenFilePicker){
+    setMsg('Your browser does not support auto-live refresh. Use Chrome or Edge, or use "Open CSV (basic)" and re-open after each Excel export.');
+    return;
+  }
+  const t = tabs[activeTab];
+  try{
+    const [handle] = await window.showOpenFilePicker({types:[{description:'CSV file', accept:{'text/csv':['.csv']}}]});
+    t.liveHandle = handle;
+    const file = await handle.getFile();
+    t.fname = file.name + ' (live)';
+    document.getElementById('fname').textContent = t.fname;
+    t.refreshFn = ()=>readLiveHandle(t);
+    await readLiveHandle(t);
+    setLiveStatus(true);
+    stopLiveWatch(t);
+    const secs = parseInt(document.getElementById('intervalSelect').value);
+    t.liveTimer = setInterval(t.refreshFn, secs*1000);
+    setMsg('');
+  }catch(err){ /* user cancelled picker */ }
+});
+
+document.getElementById('intervalSelect').addEventListener('change', ()=>{
+  const t = tabs[activeTab];
+  if(t.liveTimer && t.refreshFn){
+    stopLiveWatch(t);
+    const secs = parseInt(document.getElementById('intervalSelect').value);
+    t.liveTimer = setInterval(t.refreshFn, secs*1000);
+  }
+});
+
+/* ===================== Live data from a published Google Sheet (CSV) ===================== */
+// Works from any device, anywhere — the person editing the sheet doesn't need this page open,
+// and everyone viewing this page sees updates automatically on the next poll.
+async function fetchSheetCSV(t){
+  try{
+    const bust = (t.sheetUrl.includes('?') ? '&' : '?') + '_=' + Date.now();
+    const resp = await fetch(t.sheetUrl + bust, {cache:'no-store'});
+    if(!resp.ok) throw new Error('HTTP '+resp.status);
+    const text = await resp.text();
+    t.rows = parseCSV(text);
+    if(activeTab === (t===tabs.cap?'cap':'inst')) render();
+    setMsg('');
+  }catch(err){
+    setMsg('Could not fetch the Google Sheet — check the link is published as CSV and publicly viewable.');
+  }
+}
+function connectSheet(t, url, secs){
+  stopLiveWatch(t);
+  t.sheetUrl = url;
+  t.fname = 'Google Sheet (live)';
+  t.refreshFn = ()=>fetchSheetCSV(t);
+  fetchSheetCSV(t);
+  t.liveTimer = setInterval(t.refreshFn, secs*1000);
+}
+document.getElementById('btnConnectSheet').addEventListener('click', ()=>{
+  const url = document.getElementById('sheetUrlInput').value.trim();
+  if(!url){ setMsg('Paste a published Google Sheet CSV link first.'); return; }
+  const t = tabs[activeTab];
+  const secs = parseInt(document.getElementById('intervalSelect').value);
+  connectSheet(t, url, secs);
+  document.getElementById('fname').textContent = t.fname;
+  setLiveStatus(true);
+  try{ localStorage.setItem('sheetUrl_'+activeTab, url); }catch(e){}
+});
+
+/* ===================== Sample data ===================== */
+document.getElementById('btnSample').addEventListener('click', ()=>{
+  const t = tabs[activeTab];
+  stopLiveWatch(t);
+  setLiveStatus(false);
+  t.fname = 'sample data';
+  document.getElementById('fname').textContent = t.fname;
+  if(activeTab==='cap'){
+    t.rows = [
+      {sr:'1',choice:'1.13E+08',branch:'Civil Engineering', intake:12, admitted:9, cancelled:1, vacancy:3},
+      {sr:'2',choice:'1.13E+08',branch:'Computer Science and Engineering', intake:8, admitted:8, cancelled:0, vacancy:0},
+      {sr:'3',choice:'1.13E+08',branch:'Electrical Engineering', intake:9, admitted:5, cancelled:0, vacancy:4},
+      {sr:'4',choice:'1.13E+08',branch:'Electronics and Telecommunication Engg', intake:9, admitted:6, cancelled:1, vacancy:3},
+      {sr:'5',choice:'1.13E+08',branch:'Mechanical Engineering', intake:8, admitted:4, cancelled:0, vacancy:4},
+      {sr:'6',choice:'1.13E+08',branch:'Computer Science and Engineering (AI & ML)', intake:7, admitted:7, cancelled:0, vacancy:0},
+      {sr:'7',choice:'1.13E+08',branch:'Artificial Intelligence and Data Science', intake:14, admitted:10, cancelled:2, vacancy:4}
+    ];
+  } else {
+    t.rows = [
+      {sr:'1',choice:'1.13E+08',branch:'Civil Engineering', intake:0, admitted:0, cancelled:0, vacancy:0},
+      {sr:'2',choice:'1.13E+08',branch:'Computer Science and Engineering', intake:14, admitted:0, cancelled:0, vacancy:14},
+      {sr:'3',choice:'1.13E+08',branch:'Electrical Engineering', intake:0, admitted:0, cancelled:0, vacancy:0},
+      {sr:'4',choice:'1.13E+08',branch:'Electronics and Telecommunication Engg', intake:0, admitted:0, cancelled:0, vacancy:0},
+      {sr:'5',choice:'1.13E+08',branch:'Mechanical Engineering', intake:0, admitted:0, cancelled:0, vacancy:0},
+      {sr:'6',choice:'1.13E+08',branch:'Computer Science and Engineering (AI & ML)', intake:6, admitted:0, cancelled:0, vacancy:6},
+      {sr:'7',choice:'1.13E+08',branch:'Artificial Intelligence and Data Science', intake:8, admitted:0, cancelled:0, vacancy:8}
+    ];
+  }
+  render();
+});
+
+function setMsg(t){ document.getElementById('msg').textContent = t; }
+
+/* ===================== Auto-connect on load ===================== */
+// Priority: hardcoded CONFIG link (same for every visitor) > a link saved earlier in this browser.
+['cap','inst'].forEach(key=>{
+  const t = tabs[key];
+  let url = CONFIG[key].sheetUrl;
+  if(!url){ try{ url = localStorage.getItem('sheetUrl_'+key) || ''; }catch(e){} }
+  if(url) connectSheet(t, url, DEFAULT_REFRESH_SECS);
+});
+
+/* init */
+switchTab('cap');
+</script>
+</body>
+</html>
