@@ -37,6 +37,7 @@
     min-height:100vh;
     padding-bottom:112px;
   }
+  body.no-dock{ padding-bottom:24px; }
   .digits{font-family:"Bahnschrift","Arial Narrow","Segoe UI",sans-serif;font-weight:800;letter-spacing:.5px;}
 
   /* ---------- Marquee header ---------- */
@@ -478,29 +479,42 @@ document.getElementById('btnSample').addEventListener('click', ()=>{
   document.getElementById('fname').textContent = t.fname;
   if(activeTab==='cap'){
     t.rows = [
-      {sr:'1',choice:'0112719110',branch:'Civil Engineering', intake:12, admitted:9, cancelled:1, vacancy:3},
-      {sr:'2',choice:'0112724210',branch:'Computer Science and Engineering', intake:8, admitted:8, cancelled:0, vacancy:0},
-      {sr:'3',choice:'0112729310',branch:'Electrical Engineering', intake:9, admitted:5, cancelled:0, vacancy:4},
-      {sr:'4',choice:'0112737210',branch:'Electronics and Telecommunication Engg', intake:9, admitted:6, cancelled:1, vacancy:3},
-      {sr:'5',choice:'0112761210',branch:'Mechanical Engineering', intake:8, admitted:4, cancelled:0, vacancy:4},
-      {sr:'6',choice:'0112791110',branch:'Computer Science and Engineering (AI & ML)', intake:7, admitted:7, cancelled:0, vacancy:0},
-      {sr:'7',choice:'0112799510',branch:'Artificial Intelligence and Data Science', intake:14, admitted:10, cancelled:2, vacancy:4}
+      {sr:'1',choice:'1.13E+08',branch:'Civil Engineering', intake:12, admitted:9, cancelled:1, vacancy:3},
+      {sr:'2',choice:'1.13E+08',branch:'Computer Science and Engineering', intake:8, admitted:8, cancelled:0, vacancy:0},
+      {sr:'3',choice:'1.13E+08',branch:'Electrical Engineering', intake:9, admitted:5, cancelled:0, vacancy:4},
+      {sr:'4',choice:'1.13E+08',branch:'Electronics and Telecommunication Engg', intake:9, admitted:6, cancelled:1, vacancy:3},
+      {sr:'5',choice:'1.13E+08',branch:'Mechanical Engineering', intake:8, admitted:4, cancelled:0, vacancy:4},
+      {sr:'6',choice:'1.13E+08',branch:'Computer Science and Engineering (AI & ML)', intake:7, admitted:7, cancelled:0, vacancy:0},
+      {sr:'7',choice:'1.13E+08',branch:'Artificial Intelligence and Data Science', intake:14, admitted:10, cancelled:2, vacancy:4}
     ];
   } else {
     t.rows = [
-      {sr:'1',choice:'0112719110',branch:'Civil Engineering', intake:0, admitted:0, cancelled:0, vacancy:0},
-      {sr:'2',choice:'0112724210',branch:'Computer Science and Engineering', intake:14, admitted:0, cancelled:0, vacancy:14},
-      {sr:'3',choice:'0112729310',branch:'Electrical Engineering', intake:0, admitted:0, cancelled:0, vacancy:0},
-      {sr:'4',choice:'0112737210',branch:'Electronics and Telecommunication Engg', intake:0, admitted:0, cancelled:0, vacancy:0},
-      {sr:'5',choice:'0112761210',branch:'Mechanical Engineering', intake:0, admitted:0, cancelled:0, vacancy:0},
-      {sr:'6',choice:'0112791110',branch:'Computer Science and Engineering (AI & ML)', intake:6, admitted:0, cancelled:0, vacancy:6},
-      {sr:'7',choice:'0112799510',branch:'Artificial Intelligence and Data Science', intake:8, admitted:0, cancelled:0, vacancy:8}
+      {sr:'1',choice:'1.13E+08',branch:'Civil Engineering', intake:0, admitted:0, cancelled:0, vacancy:0},
+      {sr:'2',choice:'1.13E+08',branch:'Computer Science and Engineering', intake:14, admitted:0, cancelled:0, vacancy:14},
+      {sr:'3',choice:'1.13E+08',branch:'Electrical Engineering', intake:0, admitted:0, cancelled:0, vacancy:0},
+      {sr:'4',choice:'1.13E+08',branch:'Electronics and Telecommunication Engg', intake:0, admitted:0, cancelled:0, vacancy:0},
+      {sr:'5',choice:'1.13E+08',branch:'Mechanical Engineering', intake:0, admitted:0, cancelled:0, vacancy:0},
+      {sr:'6',choice:'1.13E+08',branch:'Computer Science and Engineering (AI & ML)', intake:6, admitted:0, cancelled:0, vacancy:6},
+      {sr:'7',choice:'1.13E+08',branch:'Artificial Intelligence and Data Science', intake:8, admitted:0, cancelled:0, vacancy:8}
     ];
   }
   render();
 });
 
 function setMsg(t){ document.getElementById('msg').textContent = t; }
+
+/* ===================== Admin-only controls ===================== */
+// The dock (file upload / connect buttons) is only for YOU to set up or troubleshoot —
+// regular visitors get the live board with none of this visible.
+// Change ADMIN_KEY to a private phrase only you know, then open the page as:
+//   https://yoursite.github.io/seat-board/?admin=YOUR_PHRASE
+// to see the controls. Without that exact key in the URL, the dock stays hidden.
+const ADMIN_KEY = 'jcet2026admin';
+const isAdmin = new URLSearchParams(location.search).get('admin') === ADMIN_KEY;
+if(!isAdmin){
+  document.querySelector('.dock').style.display = 'none';
+  document.body.classList.add('no-dock');
+}
 
 /* ===================== Auto-connect on load ===================== */
 // Priority: hardcoded CONFIG link (same for every visitor) > a link saved earlier in this browser.
