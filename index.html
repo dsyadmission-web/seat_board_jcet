@@ -444,7 +444,16 @@ async function fetchSheetCSV(t){
     const resp = await fetch(t.sheetUrl + bust, {cache:'no-store'});
     if(!resp.ok) throw new Error('HTTP '+resp.status);
     const text = await resp.text();
-    t.rows = parseCSV(text);
+    const parsed = parseCSV(text);
+    // Guard: Google's publish endpoint occasionally returns an empty/interim response
+    // when polled frequently. If we already have good data and this fetch came back
+    // empty, treat it as a transient hiccup and keep showing the last good values
+    // instead of flashing the board to 0.
+    if(parsed.length === 0 && t.rows.length > 0){
+      setMsg('Sheet returned no data this cycle — keeping last good values.');
+      return;
+    }
+    t.rows = parsed;
     if(activeTab === (t===tabs.cap?'cap':'inst')) render();
     setMsg('');
   }catch(err){
