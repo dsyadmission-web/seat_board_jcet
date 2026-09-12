@@ -127,12 +127,12 @@
 // sheet tab > CSV format) and paste its link here, keyed by Choice Code.
 const CONFIG = {
   '112719110': 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRlEOpfjiWD8fnOcqAuKRsCS4jrI5elp-zng34Cwi_naDtDQYw_mgKVLavZhWXO3Q/pub?gid=1734963980&single=true&output=csv', // Civil Engineering
-  '112724210': 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRlEOpfjiWD8fnOcqAuKRsCS4jrI5elp-zng34Cwi_naDtDQYw_mgKVLavZhWXO3Q/pub?gid=789996206&single=true&output=csv', // Computer Science and Engineering
+  '112724210': '', // Computer Science and Engineering
   '112729310': 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRlEOpfjiWD8fnOcqAuKRsCS4jrI5elp-zng34Cwi_naDtDQYw_mgKVLavZhWXO3Q/pub?gid=143989289&single=true&output=csv', // Electrical Engineering
   '112737210': 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRlEOpfjiWD8fnOcqAuKRsCS4jrI5elp-zng34Cwi_naDtDQYw_mgKVLavZhWXO3Q/pub?gid=499790374&single=true&output=csv', // Electronics and Telecommunication Engg
   '112761210': 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRlEOpfjiWD8fnOcqAuKRsCS4jrI5elp-zng34Cwi_naDtDQYw_mgKVLavZhWXO3Q/pub?gid=576318486&single=true&output=csv', // Mechanical Engineering
-  '112791110': 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRlEOpfjiWD8fnOcqAuKRsCS4jrI5elp-zng34Cwi_naDtDQYw_mgKVLavZhWXO3Q/pub?gid=1586702308&single=true&output=csv', // Computer Science and Engineering (AI & ML)
-  '112799510': 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRlEOpfjiWD8fnOcqAuKRsCS4jrI5elp-zng34Cwi_naDtDQYw_mgKVLavZhWXO3Q/pub?gid=1623443060&single=true&output=csv'  // Artificial Intelligence and Data Science
+  '112791110': '', // Computer Science and Engineering (AI & ML)
+  '112799510': ''  // Artificial Intelligence and Data Science
 };
 const REFRESH_SECS = 15;
 
@@ -153,9 +153,13 @@ let lastGoodTable = null;
 // Block 2: "Category,OPEN-G,OPEN-L,...,Total" header + State Level / PWD / DEF rows
 function parseDetailCSV(text){
   const lines = text.split(/\r?\n/).map(l=>l.replace(/\r$/,''));
-  const blankIdx = lines.findIndex(l=>l.trim()==='');
-  const block1 = (blankIdx===-1 ? lines : lines.slice(0,blankIdx)).filter(l=>l.trim()!=='');
-  const block2 = (blankIdx===-1 ? [] : lines.slice(blankIdx+1)).filter(l=>l.trim()!=='');
+  // A separator row from a published Google Sheet CSV keeps the sheet's full column
+  // width, so it isn't a truly empty line — it's just commas (e.g. ",,,,,,,,,"). Treat
+  // any line with no non-comma content as the blank separator.
+  const isBlankRow = l => l.replace(/,/g,'').trim()==='';
+  const blankIdx = lines.findIndex(isBlankRow);
+  const block1 = (blankIdx===-1 ? lines : lines.slice(0,blankIdx)).filter(l=>!isBlankRow(l));
+  const block2 = (blankIdx===-1 ? [] : lines.slice(blankIdx+1)).filter(l=>!isBlankRow(l));
 
   const summary = {};
   block1.forEach(line=>{
