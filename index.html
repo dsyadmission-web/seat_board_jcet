@@ -314,7 +314,7 @@ function render(){
       <div class="card-head">
         <div class="sr-badge">${r.sr}</div>
         <div class="name-wrap">
-          <div class="name">${r.branch}</div>
+          <div class="name">${r.choice ? `<a href="branch-detail.html?code=${encodeURIComponent(r.choice)}" target="_blank" rel="noopener" style="color:inherit;text-decoration:none;border-bottom:1px dashed var(--purple);">${r.branch}</a>` : r.branch}</div>
           ${r.choice ? `<div class="choice">Choice Code: ${r.choice}</div>` : ''}
         </div>
         <div class="intake-badge">INTAKE ${r.intake}</div>
