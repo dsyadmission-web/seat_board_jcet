@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Branch Seat Detail — Live</title>
+<style>
+  :root{
+    --bg:#f4f5fb;
+    --panel:#ffffff;
+    --panel-alt:#eef0fa;
+    --purple:#7d72a8;
+    --purple-dark:#5f5586;
+    --purple-tint:#ece9f7;
+    --ink:#1c2340;
+    --text-dim:#6b7280;
+    --line:#e1e3ef;
+    --gold:#c98a12;
+    --gold-tint:#fbeed2;
+    --admit:#1f9d73;
+    --admit-dark:#137a58;
+    --admit-tint:#e4f7ef;
+    --vacant:#dd8a19;
+    --vacant-dark:#b06e0f;
+    --vacant-tint:#fdf0dd;
+    --cancel:#d9463a;
+    --cancel-tint:#fdeceb;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(ellipse 900px 420px at 50% -12%, rgba(125,114,168,0.10), transparent 60%),
+      var(--bg);
+    color:var(--ink);
+    font-family:"Segoe UI","Helvetica Neue",Arial,sans-serif;
+    min-height:100vh;
+    padding:24px 18px 48px;
+  }
+  .wrap{max-width:1000px;margin:0 auto;}
+  .backlink{
+    display:inline-flex;align-items:center;gap:6px;
+    font-size:13.5px;font-weight:600;color:var(--purple-dark);
+    text-decoration:none;margin-bottom:14px;
+  }
+  .backlink:hover{text-decoration:underline;}
+  .headerbar{
+    background:var(--panel);border:1px solid var(--line);border-radius:16px;
+    padding:18px 22px;margin-bottom:18px;
+    display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:12px;
+  }
+  .headerbar h1{font-size:19px;margin:0 0 4px;color:var(--ink);}
+  .headerbar .code{font-size:12.5px;color:var(--text-dim);font-weight:600;}
+  .status{font-size:12px;color:var(--text-dim);text-align:right;}
+  .status .dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--admit);margin-right:5px;}
+  .status.stale .dot{background:var(--vacant);}
+
+  .summary-grid{
+    display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));
+    gap:10px;margin-bottom:22px;
+  }
+  .stat{
+    background:var(--panel);border:1px solid var(--line);border-radius:14px;
+    padding:14px 16px;text-align:center;
+  }
+  .stat .n{font-size:24px;font-weight:800;color:var(--purple-dark);}
+  .stat .l{font-size:11px;color:var(--text-dim);font-weight:700;text-transform:uppercase;letter-spacing:.03em;margin-top:2px;}
+  .stat.vacant .n{color:var(--vacant-dark);}
+
+  .table-card{
+    background:var(--panel);border:1px solid var(--line);border-radius:16px;
+    padding:18px;overflow-x:auto;
+  }
+  .table-card h2{font-size:14px;margin:0 0 12px;color:var(--ink);}
+  table{border-collapse:collapse;width:100%;min-width:900px;font-size:12.5px;}
+  th,td{padding:8px 10px;text-align:center;border-bottom:1px solid var(--line);white-space:nowrap;}
+  thead tr.group th{background:var(--purple-tint);color:var(--purple-dark);font-weight:700;font-size:11.5px;}
+  thead tr.sub th{background:var(--panel-alt);color:var(--text-dim);font-weight:600;font-size:11px;}
+  tbody th{text-align:left;background:var(--panel-alt);font-weight:700;color:var(--ink);position:sticky;left:0;}
+  td.total, th.total{font-weight:800;color:var(--purple-dark);background:var(--purple-tint);}
+  tr.grand th, tr.grand td{border-top:2px solid var(--purple);font-weight:800;}
+
+  .empty{
+    background:var(--panel);border:1px dashed var(--line);border-radius:14px;
+    padding:40px 20px;text-align:center;color:var(--text-dim);font-size:13.5px;
+  }
+  .msg{font-size:12.5px;color:var(--cancel);margin-top:10px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="backlink" href="./index.html">← Back to Live Seat Board</a>
+
+  <div class="headerbar">
+    <div>
+      <h1 id="courseName">Loading…</h1>
+      <div class="code" id="choiceCode"></div>
+    </div>
+    <div class="status" id="statusLine"><span class="dot"></span>Last updated: —</div>
+  </div>
+
+  <div id="emptyState" class="empty" style="display:none;">
+    This branch isn't connected to live data yet. Add its published Google Sheet tab link to
+    <code>CONFIG</code> in this page for choice code <strong id="missingCode"></strong>.
+  </div>
+
+  <div id="content" style="display:none;">
+    <div class="summary-grid" id="summaryGrid"></div>
+
+    <div class="table-card">
+      <h2>Category-wise Reservation Status</h2>
+      <table>
+        <thead>
+          <tr class="group" id="groupHeaderRow"></tr>
+          <tr class="sub" id="subHeaderRow"></tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+    </div>
+  </div>
+  <div class="msg" id="msg"></div>
+</div>
+
+<script>
+/* ===================== Config: one published CSV link per branch tab ===================== */
+// Publish each branch's tab in Google Sheets (File > Share > Publish to web > pick that
+// sheet tab > CSV format) and paste its link here, keyed by Choice Code.
+const CONFIG = {
+  '112719110': 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRlEOpfjiWD8fnOcqAuKRsCS4jrI5elp-zng34Cwi_naDtDQYw_mgKVLavZhWXO3Q/pub?gid=1734963980&single=true&output=csv', // Civil Engineering
+  '112724210': 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRlEOpfjiWD8fnOcqAuKRsCS4jrI5elp-zng34Cwi_naDtDQYw_mgKVLavZhWXO3Q/pub?gid=789996206&single=true&output=csv', // Computer Science and Engineering
+  '112729310': 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRlEOpfjiWD8fnOcqAuKRsCS4jrI5elp-zng34Cwi_naDtDQYw_mgKVLavZhWXO3Q/pub?gid=143989289&single=true&output=csv', // Electrical Engineering
+  '112737210': 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRlEOpfjiWD8fnOcqAuKRsCS4jrI5elp-zng34Cwi_naDtDQYw_mgKVLavZhWXO3Q/pub?gid=499790374&single=true&output=csv', // Electronics and Telecommunication Engg
+  '112761210': 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRlEOpfjiWD8fnOcqAuKRsCS4jrI5elp-zng34Cwi_naDtDQYw_mgKVLavZhWXO3Q/pub?gid=576318486&single=true&output=csv', // Mechanical Engineering
+  '112791110': 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRlEOpfjiWD8fnOcqAuKRsCS4jrI5elp-zng34Cwi_naDtDQYw_mgKVLavZhWXO3Q/pub?gid=1586702308&single=true&output=csv', // Computer Science and Engineering (AI & ML)
+  '112799510': 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRlEOpfjiWD8fnOcqAuKRsCS4jrI5elp-zng34Cwi_naDtDQYw_mgKVLavZhWXO3Q/pub?gid=1623443060&single=true&output=csv'  // Artificial Intelligence and Data Science
+};
+const REFRESH_SECS = 15;
+
+const CATS = ['OPEN','SC','ST','VJDT','NTB','NTC','NTD','OBC','SEBC'];
+const CAT_LABELS = {OPEN:'OPEN',SC:'SC',ST:'ST',VJDT:'VJ/DT',NTB:'NTB',NTC:'NTC',NTD:'NTD',OBC:'OBC',SEBC:'SEBC'};
+
+const params = new URLSearchParams(location.search);
+const code = params.get('code') || '';
+document.getElementById('choiceCode').textContent = code ? ('Choice Code: ' + code) : '';
+document.getElementById('missingCode').textContent = code || '(none given)';
+
+let lastGoodSummary = null;
+let lastGoodTable = null;
+
+/* ===================== Parsing the two-block flat CSV ===================== */
+// Block 1: "Field,Value" rows (course name, intake, vacant CAP, etc.)
+// blank line
+// Block 2: "Category,OPEN-G,OPEN-L,...,Total" header + State Level / PWD / DEF rows
+function parseDetailCSV(text){
+  const lines = text.split(/\r?\n/).map(l=>l.replace(/\r$/,''));
+  const blankIdx = lines.findIndex(l=>l.trim()==='');
+  const block1 = (blankIdx===-1 ? lines : lines.slice(0,blankIdx)).filter(l=>l.trim()!=='');
+  const block2 = (blankIdx===-1 ? [] : lines.slice(blankIdx+1)).filter(l=>l.trim()!=='');
+
+  const summary = {};
+  block1.forEach(line=>{
+    const parts = line.split(',');
+    const key = (parts[0]||'').trim();
+    const val = (parts[1]||'').trim();
+    if(key) summary[key] = val;
+  });
+
+  let table = null;
+  if(block2.length >= 2){
+    const header = block2[0].split(',').map(c=>c.trim());
+    const rows = block2.slice(1).map(l=>l.split(',').map(c=>c.trim()));
+    table = {header, rows};
+  }
+  if(Object.keys(summary).length===0 && !table) return null;
+  return {summary, table};
+}
+
+function renderSummary(summary){
+  const grid = document.getElementById('summaryGrid');
+  const fields = [
+    ['Total Intake (SI)','n'], ['MS Seats',''], ['Minority Seats',''],
+    ['All India Seats',''], ['Institute Seats',''], ['EWS Seats',''],
+    ['TFWS Seats',''], ['Vacant CAP Seats','vacant']
+  ];
+  grid.innerHTML = fields.map(([label])=>{
+    const v = summary[label] !== undefined ? summary[label] : '—';
+    const cls = label==='Vacant CAP Seats' ? 'stat vacant' : 'stat';
+    return `<div class="${cls}"><div class="n digits">${v}</div><div class="l">${label}</div></div>`;
+  }).join('');
+}
+
+function renderTable(table){
+  const groupRow = document.getElementById('groupHeaderRow');
+  const subRow = document.getElementById('subHeaderRow');
+  const body = document.getElementById('tableBody');
+
+  groupRow.innerHTML = '<th rowspan="2" style="text-align:left;">Category ▸</th>' +
+    CATS.map(c=>`<th colspan="2">${CAT_LABELS[c]}</th>`).join('') +
+    '<th rowspan="2" class="total">Total</th>';
+  subRow.innerHTML = CATS.map(()=>'<th>Gen</th><th>Ladies</th>').join('');
+
+  const wantRows = ['State Level','PWD','DEF'];
+  const byLabel = {};
+  table.rows.forEach(r=> byLabel[r[0]] = r);
+
+  const colTotals = new Array(CATS.length*2).fill(0);
+  let grandTotal = 0;
+
+  body.innerHTML = wantRows.map(label=>{
+    const r = byLabel[label];
+    const cells = [];
+    for(let i=0;i<CATS.length*2;i++){
+      const raw = r ? r[i+1] : '';
+      const num = raw==='' || raw===undefined ? 0 : (parseInt(raw)||0);
+      colTotals[i]+=num;
+      cells.push(`<td>${raw===''||raw===undefined ? '–' : raw}</td>`);
+    }
+    const rowTotal = r ? (r[CATS.length*2+1] !== undefined ? r[CATS.length*2+1] : '') : '';
+    grandTotal += parseInt(rowTotal)||0;
+    return `<tr><th>${label}</th>${cells.join('')}<td class="total">${rowTotal||0}</td></tr>`;
+  }).join('') + `<tr class="grand"><th>Grand Total</th>${colTotals.map(v=>`<td>${v}</td>`).join('')}<td class="total">${grandTotal}</td></tr>`;
+}
+
+function setStatus(ok){
+  const el = document.getElementById('statusLine');
+  el.className = 'status' + (ok?'':' stale');
+  el.innerHTML = '<span class="dot"></span>Last updated: ' + new Date().toLocaleTimeString();
+}
+
+async function fetchDetail(){
+  const url = CONFIG[code];
+  if(!url){
+    document.getElementById('emptyState').style.display='block';
+    document.getElementById('content').style.display='none';
+    return;
+  }
+  try{
+    const bust = (url.includes('?') ? '&' : '?') + '_=' + Date.now();
+    const resp = await fetch(url + bust, {cache:'no-store'});
+    if(!resp.ok) throw new Error('HTTP '+resp.status);
+    const text = await resp.text();
+    const parsed = parseDetailCSV(text);
+    // Guard: if this fetch came back empty/garbled but we already have good data,
+    // keep showing the last good values instead of flashing to blank/zero.
+    if(!parsed || (Object.keys(parsed.summary).length===0 && !parsed.table)){
+      if(lastGoodSummary){ setStatus(false); return; }
+      throw new Error('empty');
+    }
+    lastGoodSummary = parsed.summary;
+    lastGoodTable = parsed.table;
+    document.getElementById('emptyState').style.display='none';
+    document.getElementById('content').style.display='block';
+    document.getElementById('courseName').textContent = parsed.summary['Course Name'] || ('Choice Code ' + code);
+    renderSummary(parsed.summary);
+    if(parsed.table) renderTable(parsed.table);
+    setStatus(true);
+    document.getElementById('msg').textContent = '';
+  }catch(err){
+    if(!lastGoodSummary){
+      document.getElementById('msg').textContent = 'Could not load live data for this branch yet.';
+    }
+    setStatus(false);
+  }
+}
+
+if(!code){
+  document.getElementById('courseName').textContent = 'No branch specified';
+  document.getElementById('emptyState').style.display='block';
+} else {
+  fetchDetail();
+  setInterval(fetchDetail, REFRESH_SECS*1000);
+}
+</script>
+</body>
+</html>
